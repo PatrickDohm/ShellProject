@@ -10,9 +10,10 @@
 
 #define MAX_LINE 80 //The maximum length command
 using namespace std;
-
+int historyNum = 1; //use this to write what command number we are on
 void parse(char *line, char *args[]);
 void printHistory(vector<string> history, int historyNum);
+vector<string> add_to_histroy(char *line, vector<string> history);
 
 int main(void)
 {
@@ -20,9 +21,9 @@ int main(void)
     char *args[MAX_LINE / 2 + 1]; //command line arguments
     int should_run = 1;           //flag to determine when to exit program
     vector<string> history;
-
     history.clear();
-    int historyNum = 1; //use this to write what command number we are on
+
+    string add_to_history;
 
     while (should_run)
     {
@@ -33,33 +34,29 @@ int main(void)
         char line[1024];
         fgets(line, MAX_LINE, stdin);
 
-
         //handle history and commands that are specific to here
-        if (strcmp(line, "exit\n") == 0)
+        if (strcmp(line, "history\n") == 0)
+        {
+            while (strcmp(line, "history\n") == 0)
+            {
+                history = add_to_histroy(line, history);
+                printf("osh>");
+                fflush(stdout);
+                fgets(line, MAX_LINE, stdin);
+            }
+        }
+        else if (strcmp(line, "exit\n") == 0)
         {
             exit(1);
         }
-        else if (strcmp(line, "history\n") == 0)
-        {
-            printHistory(history, historyNum);
-        }
+
         else if (strcmp(line, "!!"))
         { //if the user types !! it will repeat the most recent command
             strcpy(line, history[history.size() - 1].c_str());
         }
-        string add_to_history = line;
-        history.push_back(add_to_history); // add current command to history
-        if (history.size() > 10)
-        { //History has a max size of 10, destroy the first entry if it gets too big
-            history.erase(history.begin());
-        }
-        historyNum++; //need to increment the history number
 
-
-
+        history = add_to_histroy(line, history);
         parse(line, args);
-
-
 
         //(1) fork a child process using fork()
         pid_t child_pid;
@@ -99,18 +96,18 @@ int main(void)
     return 0;
 }
 
+//FUNCTIONS
+
 //converts the line into args
 void parse(char *line, char **argv)
 {
-    while (*line != '\0')
+    int i = 0;
+    while (line != NULL)
     {
-        while (*line == ' ' || *line == '\t' || *line == '\n')
-            *line++ = '\0';
-        *argv++ = line;
-        while (*line != '\0' && *line != ' ' && *line != '\t' && *line != '\n')
-            line++;
+        line = strtok(NULL, " \n\0");
+        argv[i] = line;
+        i++;
     }
-    *argv = NULL;
 }
 
 //will print the entire history vector
@@ -122,4 +119,17 @@ void printHistory(vector<string> history, int historyNum)
         cout << historyNum << history[i] << endl;
         historyNum--;
     }
+}
+
+//adds the most recent command to the history, checks size then returns
+vector<string> add_to_histroy(char *line, vector<string> history)
+{
+    string add_to_history = line;
+    history.push_back(add_to_history); // add current command to history
+    if (history.size() > 10)
+    { //History has a max size of 10, destroy the first entry if it gets too big
+        history.erase(history.begin());
+    }
+    historyNum++; //need to increment the history number
+    return history;
 }
